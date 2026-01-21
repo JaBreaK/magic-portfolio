@@ -7,11 +7,20 @@ import {
   HiEnvelope,
   HiCalendarDays,
   HiArrowRight,
+  HiArrowLeft,
+  HiChevronLeft,
+  HiChevronRight,
   HiOutlineEye,
   HiOutlineEyeSlash,
   HiOutlineDocument,
   HiOutlineGlobeAsiaAustralia,
   HiOutlineRocketLaunch,
+  HiPlay,
+  HiPause,
+  HiMagnifyingGlass,
+  HiArrowDownTray,
+  HiCheck,
+  HiTrash,
 } from "react-icons/hi2";
 
 import {
@@ -20,6 +29,7 @@ import {
   PiGridFourDuotone,
   PiBookBookmarkDuotone,
   PiImageDuotone,
+  PiGearDuotone,
 } from "react-icons/pi";
 
 import {
@@ -34,6 +44,9 @@ import { FaDiscord, FaGithub, FaLinkedin, FaX, FaThreads, FaInstagram, FaXTwitte
 export const iconLibrary: Record<string, IconType> = {
   arrowUpRight: HiArrowUpRight,
   arrowRight: HiArrowRight,
+  arrowLeft: HiArrowLeft,
+  chevronLeft: HiChevronLeft,
+  chevronRight: HiChevronRight,
   email: HiEnvelope,
   globe: HiOutlineGlobeAsiaAustralia,
   person: PiUserCircleDuotone,
@@ -43,6 +56,13 @@ export const iconLibrary: Record<string, IconType> = {
   calendar: HiCalendarDays,
   home: PiHouseDuotone,
   gallery: PiImageDuotone,
+  settings: PiGearDuotone,
+  play: HiPlay,
+  pause: HiPause,
+  search: HiMagnifyingGlass,
+  download: HiArrowDownTray,
+  check: HiCheck,
+  trash: HiTrash,
   discord: FaDiscord,
   eye: HiOutlineEye,
   eyeOff: HiOutlineEyeSlash,

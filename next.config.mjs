@@ -24,4 +24,13 @@ const nextConfig = {
   },
 };
 
-export default withMDX(nextConfig);
+import withPWAInit from "@ducanh2912/next-pwa";
+
+const withPWA = withPWAInit({
+  dest: "public",
+  disable: false,
+  register: true,
+  skipWaiting: true,
+});
+
+export default withMDX(withPWA(nextConfig));
