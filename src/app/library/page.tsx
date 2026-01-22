@@ -13,16 +13,27 @@ export default function LibraryPage() {
     const [history, setHistory] = useState<HistoryItem[]>([]);
     const [bookmarks, setBookmarks] = useState<BookmarkItem[]>([]);
     const [downloads, setDownloads] = useState<any[]>([]);
+    const [localCovers, setLocalCovers] = useState<Record<string, string>>({});
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         const loadData = async () => {
             setHistory(getHistory());
             setBookmarks(getBookmarks());
-            
+
             const allDownloads = await downloadManager.getAllDownloads();
             setDownloads(allDownloads);
-            
+
+            // Load local cover images for offline display
+            const covers: Record<string, string> = {};
+            for (const download of allDownloads) {
+                const localCover = await downloadManager.getCoverImage(download.mangaId);
+                if (localCover) {
+                    covers[download.mangaId] = localCover;
+                }
+            }
+            setLocalCovers(covers);
+
             setLoading(false);
 
             // Check for updates for bookmarks
@@ -203,7 +214,7 @@ export default function LibraryPage() {
                                 >
                                     <div style={{ position: 'relative', aspectRatio: '2/3' }}>
                                         <SmartImage
-                                            src={item.coverUrl}
+                                            src={localCovers[item.mangaId] || item.coverUrl}
                                             alt={item.mangaTitle}
                                             aspectRatio="2/3"
                                             objectFit="cover"

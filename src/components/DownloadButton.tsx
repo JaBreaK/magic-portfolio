@@ -1,9 +1,10 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { Button, Flex, Text, Icon } from '@once-ui-system/core';
+import { Button } from '@once-ui-system/core';
 import { downloadManager } from '@/services/downloadManager';
 import { MangaDetail, ChapterDetail } from '@/types/api';
+import { api } from '@/services/api';
 
 interface DownloadButtonProps {
     manga: MangaDetail;
@@ -29,7 +30,10 @@ export const DownloadButton = ({ manga, chapter, images }: DownloadButtonProps) 
 
         setIsDownloading(true);
         try {
-            await downloadManager.saveChapter(manga, chapter, images);
+            const chapterListResponse = await api.getChapterList(manga.manga_id, { page: 1, page_size: 1000, sort_by: 'chapter_number', sort_order: 'desc' });
+            const chapterList = chapterListResponse.data.map(c => ({ id: c.chapter_id, number: c.chapter_number }));
+            
+            await downloadManager.saveChapter(manga, chapter, images, chapterList);
             setIsDownloaded(true);
         } catch (error) {
             console.error("Download failed:", error);

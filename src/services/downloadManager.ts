@@ -13,6 +13,9 @@ interface DownloadDB extends DBSchema {
             coverUrl: string;
             timestamp: number;
             totalPages: number;
+            mangaDetail: MangaDetail;
+            chapterDetail: ChapterDetail;
+            chapterList: { id: string; number: number }[];
         };
         indexes: { 'by-manga': string };
     };
@@ -20,10 +23,14 @@ interface DownloadDB extends DBSchema {
         key: string; // chapterId-pageIndex
         value: Blob;
     };
+    covers: {
+        key: string; // mangaId
+        value: Blob;
+    };
 }
 
 const DB_NAME = 'bello-downloads';
-const DB_VERSION = 1;
+const DB_VERSION = 3; // Increment version for new store
 
 let dbPromise: Promise<IDBPDatabase<DownloadDB>>;
 
@@ -31,9 +38,16 @@ const getDB = () => {
     if (!dbPromise) {
         dbPromise = openDB<DownloadDB>(DB_NAME, DB_VERSION, {
             upgrade(db) {
-                const downloadStore = db.createObjectStore('downloads', { keyPath: 'chapterId' });
-                downloadStore.createIndex('by-manga', 'mangaId');
-                db.createObjectStore('images');
+                if (!db.objectStoreNames.contains('downloads')) {
+                    const downloadStore = db.createObjectStore('downloads', { keyPath: 'chapterId' });
+                    downloadStore.createIndex('by-manga', 'mangaId');
+                }
+                if (!db.objectStoreNames.contains('images')) {
+                    db.createObjectStore('images');
+                }
+                if (!db.objectStoreNames.contains('covers')) {
+                    db.createObjectStore('covers');
+                }
             },
         });
     }
@@ -41,7 +55,7 @@ const getDB = () => {
 };
 
 export const downloadManager = {
-    async saveChapter(manga: MangaDetail, chapter: ChapterDetail, images: string[]) {
+    async saveChapter(manga: MangaDetail, chapter: ChapterDetail, images: string[], chapterList: { id: string; number: number }[]) {
         const db = await getDB();
 
         // Save metadata
@@ -52,13 +66,30 @@ export const downloadManager = {
             chapterNumber: chapter.chapter_number,
             coverUrl: manga.cover_image_url,
             timestamp: Date.now(),
-            totalPages: images.length
+            totalPages: images.length,
+            mangaDetail: manga,
+            chapterDetail: chapter,
+            chapterList: chapterList
         });
 
-        // Fetch and save images
+        // Save cover image if not already saved
+        const existingCover = await db.get('covers', manga.manga_id);
+        if (!existingCover && manga.cover_image_url) {
+            try {
+                const proxyUrl = `/api/proxy?url=${encodeURIComponent(manga.cover_image_url)}`;
+                const response = await fetch(proxyUrl);
+                if (response.ok) {
+                    const blob = await response.blob();
+                    await db.put('covers', blob, manga.manga_id);
+                }
+            } catch (error) {
+                console.error(`Failed to download cover for ${manga.title}`, error);
+            }
+        }
+
+        // Fetch and save chapter images
         await Promise.all(images.map(async (url, index) => {
             try {
-                // Use proxy to bypass CORS
                 const proxyUrl = `/api/proxy?url=${encodeURIComponent(url)}`;
                 const response = await fetch(proxyUrl);
                 if (!response.ok) throw new Error(`Proxy failed: ${response.statusText}`);
@@ -120,7 +151,10 @@ export const downloadManager = {
                 `${chapterDetail.data.base_url}${chapterDetail.data.chapter.path}${filename}`
             );
 
-            await this.saveChapter(manga, chapterDetail.data, images);
+            const chapterListResponse = await api.getChapterList(manga.manga_id, { page: 1, page_size: 1000, sort_by: 'chapter_number', sort_order: 'desc' });
+            const chapterList = chapterListResponse.data.map(c => ({ id: c.chapter_id, number: c.chapter_number }));
+
+            await this.saveChapter(manga, chapterDetail.data, images, chapterList);
         } catch (error) {
             console.error(`Failed to download chapter ${chapterId}`, error);
             throw error;
@@ -130,5 +164,19 @@ export const downloadManager = {
     async getAllDownloads() {
         const db = await getDB();
         return db.getAll('downloads');
+    },
+
+    async getDownload(chapterId: string) {
+        const db = await getDB();
+        return db.get('downloads', chapterId);
+    },
+
+    async getCoverImage(mangaId: string): Promise<string | null> {
+        const db = await getDB();
+        const blob = await db.get('covers', mangaId);
+        if (blob) {
+            return URL.createObjectURL(blob);
+        }
+        return null;
     }
 };
